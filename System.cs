@@ -1,9 +1,12 @@
 ﻿using Org.Reddragonit.MultiDomain.Controllers;
+using Org.Reddragonit.MultiDomain.Interfaces;
 using Org.Reddragonit.MultiDomain.Interfaces.DataSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.EventSystem;
 using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -11,6 +14,8 @@ namespace Org.Reddragonit.MultiDomain
 {
     public static class System
     {
+        private delegate void delAppendEntry(StackFrame sf,LogLevels level, string message);
+
         internal struct sDomain
         {
             private AppDomain _domain;
@@ -41,6 +46,7 @@ namespace Org.Reddragonit.MultiDomain
         private static Core _core;
         private static Mutex _mut;
         private static MT19937 _rand;
+        private static delAppendEntry _appendEntry;
         private static List<sDomain> _domains;
         internal static sDomain[] Domains
         {
@@ -60,6 +66,7 @@ namespace Org.Reddragonit.MultiDomain
             _mut = new Mutex(false);
             _rand = new MT19937(DateTime.Now.Ticks);
             _domains = new List<sDomain>();
+            _appendEntry = new delAppendEntry(_AppendEntry);
         }
 
         #region Events
@@ -78,6 +85,140 @@ namespace Org.Reddragonit.MultiDomain
         public static bool StoreObject(Messages.DataObject obj) { return _core.AbsoluteParent.StoreObject(obj); }
         public static bool DestroyObject(Messages.DataObject obj) { return _core.AbsoluteParent.DestroyObject(obj); }
         public static IDataObject[] SearchForObject(string type, ISearchCondition condition) { return _core.AbsoluteParent.SearchForObject(type, condition); }
+        #endregion
+        #region Logging
+        public static void Error(Exception e)
+        {
+            StackFrame sf = new StackFrame(1);
+            AssemblyName assName = new AssemblyName(sf.GetMethod().DeclaringType.Assembly.FullName);
+            MethodBase method = sf.GetMethod();
+            Exception ex = e;
+            while (ex != null)
+            {
+
+                _AppendEntry(LogLevels.Error, ex.Message);
+                _AppendEntry(LogLevels.Error, ex.StackTrace);
+                ex = ex.InnerException;
+            }
+        }
+
+        public static void Error(string message)
+        {
+            _AppendEntry(LogLevels.Error, message);
+        }
+
+        public static void Error(string message, object arg0)
+        {
+            _AppendEntry(LogLevels.Error, string.Format(message, arg0));
+        }
+
+        public static void Error(string message, object arg0, object arg1)
+        {
+            _AppendEntry(LogLevels.Error, string.Format(message, arg0, arg1));
+        }
+
+        public static void Error(string message, object[] args)
+        {
+            _AppendEntry(LogLevels.Error, string.Format(message, args));
+        }
+
+        public static void Fatal(string message)
+        {
+            _AppendEntry(LogLevels.Fatal, message);
+        }
+
+        public static void Fatal(string message, object arg0)
+        {
+            _AppendEntry(LogLevels.Fatal, string.Format(message, arg0));
+        }
+
+        public static void Fatal(string message, object arg0, object arg1)
+        {
+            _AppendEntry(LogLevels.Fatal, string.Format(message, arg0, arg1));
+        }
+
+        public static void Fatal(string message, object[] args)
+        {
+            _AppendEntry(LogLevels.Fatal, string.Format(message, args));
+        }
+
+        public static void Warn(string message)
+        {
+            _AppendEntry(LogLevels.Warn, message);
+        }
+
+        public static void Warn(string message, object arg0)
+        {
+            _AppendEntry(LogLevels.Warn, string.Format(message, arg0));
+        }
+
+        public static void Warn(string message, object arg0, object arg1)
+        {
+            _AppendEntry(LogLevels.Warn, string.Format(message, arg0, arg1));
+        }
+
+        public static void Warn(string message, object[] args)
+        {
+            _AppendEntry(LogLevels.Warn, string.Format(message, args));
+        }
+
+        public static void Info(string message)
+        {
+            _AppendEntry(LogLevels.Info, message);
+        }
+
+        public static void Info(string message, object arg0)
+        {
+            _AppendEntry(LogLevels.Info, string.Format(message, arg0));
+        }
+
+        public static void Info(string message, object arg0, object arg1)
+        {
+            _AppendEntry(LogLevels.Info, string.Format(message, arg0, arg1));
+        }
+
+        public static void Info(string message, object[] args)
+        {
+            _AppendEntry(LogLevels.Info, string.Format(message, args));
+        }
+
+        public static void Debug(string message)
+        {
+            _AppendEntry(LogLevels.Debug, message);
+        }
+
+        public static void Debug(string message, object arg0)
+        {
+            _AppendEntry(LogLevels.Debug, string.Format(message, arg0));
+        }
+
+        public static void Debug(string message, object arg0, object arg1)
+        {
+            _AppendEntry(LogLevels.Debug, string.Format(message, arg0, arg1));
+        }
+
+        public static void Debug(string message, object[] args)
+        {
+            _AppendEntry(LogLevels.Debug, string.Format(message, args));
+        }
+
+        private static void _AppendEntry(LogLevels level, string message)
+        {
+            int index = 0;
+            StackFrame sf = new StackFrame(index);
+            while (sf.GetMethod().DeclaringType.FullName == typeof(System).FullName)
+            {
+                index++;
+                sf = new StackFrame(index);
+            }
+            _appendEntry.BeginInvoke(sf, level, message, null, null);
+        }
+
+        private static void _AppendEntry(StackFrame sf, LogLevels level, string message)
+        {
+            MethodBase method = sf.GetMethod();
+            _core.AbsoluteParent.AppendEntry(AppDomain.CurrentDomain.FriendlyName, new AssemblyName(method.DeclaringType.Assembly.FullName), method.DeclaringType.FullName, method.Name, level, DateTime.Now, message);
+        }
         #endregion
 
         public static bool ProduceNewDomain(object[] assemblies)

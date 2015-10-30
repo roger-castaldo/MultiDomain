@@ -15,6 +15,7 @@ namespace Org.Reddragonit.MultiDomain
         private static EventController _eventController;
         private static DataObjectController _dataObjectController;
         private static DataObjectWrapperController _dataObjectWrapperController;
+        private static LogController _logController;
         private static Core _parent;
         private static delProcessEvent _processEvent;
         private static delProcessEvent _processEventInChildren;
@@ -37,6 +38,7 @@ namespace Org.Reddragonit.MultiDomain
                 _eventController = new EventController();
                 _processEvent = new delProcessEvent(_eventController.ProcessEvent);
                 _processEventInChildren = new delProcessEvent(_ProcessEventInChildren);
+                _logController = new LogController();
                 _dataObjectController = new DataObjectController();
                 _dataObjectController.Start();
                 _dataObjectWrapperController = new DataObjectWrapperController();
@@ -203,6 +205,14 @@ namespace Org.Reddragonit.MultiDomain
             return ret;
         }
         #endregion
+        #region Logging
+        public void AppendEntry(string sourceDomainName, global::System.Reflection.AssemblyName sourceAssembly, string sourceTypeName, string sourceMethodName, LogLevels level, DateTime timestamp, string message) { 
+            _logController.AppendEntry(sourceDomainName, sourceAssembly, sourceTypeName, sourceMethodName, level, timestamp, message); 
+            System.sDomain[] doms = System.Domains;
+            foreach (System.sDomain dom in doms)
+                dom.Core.AppendEntry(sourceDomainName, sourceAssembly, sourceTypeName, sourceMethodName, level, timestamp, message);
+        }
+        #endregion
 
         public void Startup()
         {
@@ -241,6 +251,8 @@ namespace Org.Reddragonit.MultiDomain
                     _dataObjectController = (DataObjectController)start;
                 else if (start is DataObjectWrapperController)
                     _dataObjectWrapperController = (DataObjectWrapperController)start;
+                else if (start is LogController)
+                    _logController = (LogController)start;
             }
         }
 

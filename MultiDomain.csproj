@@ -37,6 +37,7 @@
     <Compile Include="Controllers\DataObjectController.cs" />
     <Compile Include="Controllers\DataObjectWrapperController.cs" />
     <Compile Include="Controllers\EventController.cs" />
+    <Compile Include="Controllers\LogController.cs" />
     <Compile Include="Core.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="Interfaces\DataSystem\IDataObject.cs" />
@@ -45,6 +46,8 @@
     <Compile Include="Interfaces\DataSystem\ISearchCondition.cs" />
     <Compile Include="Interfaces\IShutdown.cs" />
     <Compile Include="Interfaces\IStartup.cs" />
+    <Compile Include="Interfaces\Logging\Enums.cs" />
+    <Compile Include="Interfaces\Logging\ILogWriter.cs" />
     <Compile Include="Messages\DataObject.cs" />
     <Compile Include="Searchers\AndCondition.cs" />
     <Compile Include="Searchers\EqualCondition.cs" />
