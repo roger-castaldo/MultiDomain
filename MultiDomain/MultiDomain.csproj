@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{09FBCEC2-3B3E-4AEC-BBBC-946A5461BB4F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Org.Reddragonit.MultiDomain</RootNamespace>
+    <AssemblyName>MultiDomain</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Controllers\DataObjectController.cs" />
+    <Compile Include="Controllers\DataObjectWrapperController.cs" />
+    <Compile Include="Controllers\EventController.cs" />
+    <Compile Include="Core.cs" />
+    <Compile Include="Delegates.cs" />
+    <Compile Include="Interfaces\DataSystem\IDataObject.cs" />
+    <Compile Include="Interfaces\DataSystem\IDataObjectProvider.cs" />
+    <Compile Include="Interfaces\DataSystem\IDataObjectWrapperProvider.cs" />
+    <Compile Include="Interfaces\DataSystem\ISearchCondition.cs" />
+    <Compile Include="Interfaces\IShutdown.cs" />
+    <Compile Include="Interfaces\IStartup.cs" />
+    <Compile Include="Messages\DataObject.cs" />
+    <Compile Include="Searchers\AndCondition.cs" />
+    <Compile Include="Searchers\EqualCondition.cs" />
+    <Compile Include="Searchers\LessThanCondition.cs" />
+    <Compile Include="Searchers\GreaterThanCondition.cs" />
+    <Compile Include="Searchers\LikeCondition.cs" />
+    <Compile Include="Searchers\NotCondition.cs" />
+    <Compile Include="Searchers\OrCondition.cs" />
+    <Compile Include="System.cs" />
+    <Compile Include="Interfaces\EventSystem\IEvent.cs" />
+    <Compile Include="Interfaces\EventSystem\IEventHandler.cs" />
+    <Compile Include="Interfaces\EventSystem\ISynchronousEvent.cs" />
+    <Compile Include="Messages\Event.cs" />
+    <Compile Include="MT19937.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
