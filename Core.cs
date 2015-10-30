@@ -40,6 +40,7 @@ namespace Org.Reddragonit.MultiDomain
                 _processEvent = new delProcessEvent(_eventController.ProcessEvent);
                 _processEventInChildren = new delProcessEvent(_ProcessEventInChildren);
                 _logController = new LogController();
+                _logController.Start();
                 _dataObjectController = new DataObjectController();
                 _dataObjectController.Start();
                 _dataObjectWrapperController = new DataObjectWrapperController();
