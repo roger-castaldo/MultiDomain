@@ -2,6 +2,7 @@
 using Org.Reddragonit.MultiDomain.Interfaces;
 using Org.Reddragonit.MultiDomain.Interfaces.DataSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.EventSystem;
+using Org.Reddragonit.MultiDomain.Interfaces.Logging;
 using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
