@@ -1,4 +1,4 @@
-﻿namespace Org.Reddragonit.MultiDomain.Interfaces
+﻿namespace Org.Reddragonit.MultiDomain.Interfaces.Logging
 {
     public enum LogLevels
     {
