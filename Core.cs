@@ -1,12 +1,13 @@
 ﻿using Org.Reddragonit.MultiDomain.Controllers;
 using Org.Reddragonit.MultiDomain.Interfaces;
-using Org.Reddragonit.MultiDomain.Interfaces.DataSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.EventSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.Logging;
+using Org.Reddragonit.MultiDomain.Interfaces.Messaging;
 using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace Org.Reddragonit.MultiDomain
@@ -14,8 +15,7 @@ namespace Org.Reddragonit.MultiDomain
     internal class Core : MarshalByRefObject
     {
         private static EventController _eventController;
-        private static DataObjectController _dataObjectController;
-        private static DataObjectWrapperController _dataObjectWrapperController;
+        private static MessageController _messageController;
         private static LogController _logController;
         private static Core _parent;
         private static delProcessEvent _processEvent;
@@ -41,10 +41,8 @@ namespace Org.Reddragonit.MultiDomain
                 _processEventInChildren = new delProcessEvent(_ProcessEventInChildren);
                 _logController = new LogController();
                 _logController.Start();
-                _dataObjectController = new DataObjectController();
-                _dataObjectController.Start();
-                _dataObjectWrapperController = new DataObjectWrapperController();
-                _dataObjectWrapperController.Start();
+                _messageController = new MessageController();
+                _messageController.Start();
             }
         }
 
@@ -73,138 +71,50 @@ namespace Org.Reddragonit.MultiDomain
         }
         public void EstablishParent(Core parent) { _parent=parent; }
         #endregion
-        #region DataObjects
-        public bool ProvidesType(string type) { return _dataObjectController.ProvidesType(type); }
-        public IDataObject ProduceNewObjectInstance(string type) {
-            IDataObject ret=null;
-            if (ProvidesType(type))
-            {
-                ret = _dataObjectController.ProduceNewObjectInstance(type);
-                if (ret != null)
-                    ret = new DataObject(ret, type);
-            }
-            else
-            {
-                System.sDomain[] doms = System.Domains;
-                foreach (System.sDomain dom in doms)
-                {
-                    ret = dom.Core.ProduceNewObjectInstance(type);
-                    if (ret != null)
-                        break;
-                }
-            }
-            if (!HasParent)
-            {
-                Queue<string> types = new Queue<string>();
-                types.Enqueue(type);
-                while (types.Count > 0)
-                {
-                    string tmp = types.Dequeue();
-                    if (_dataObjectWrapperController.WrapsType(tmp))
-                        ret = _dataObjectWrapperController.WrapDataObject(tmp, ret, ref types);
-                    System.sDomain[] doms = System.Domains;
-                    foreach (System.sDomain dom in doms)
-                        ret = dom.Core.WrapDataObject(ret, tmp, ref types);
-                }
-            }
-            return ret;
-        }
-        public IDataObject[] SearchForObject(string type, ISearchCondition condition)
+        #region InterDomainMessages
+        public bool HandlesMessage(IInterDomainMessage message)
         {
-            IDataObject[] ret = null;
-            if (ProvidesType(type))
-            {
-                ret = _dataObjectController.SearchForObject(type,condition);
-                if (ret != null)
-                {
-                    for (int x = 0; x < ret.Length; x++)
-                        ret[x] = new DataObject(ret[x], type);
-                }
-            }
-            else
-            {
-                System.sDomain[] doms = System.Domains;
-                foreach (System.sDomain dom in doms)
-                {
-                    ret = dom.Core.SearchForObject(type,condition);
-                    if (ret != null)
-                        break;
-                }
-            }
-            if (!HasParent)
-            {
-                for (int x = 0; x < ret.Length; x++)
-                {
-                    Queue<string> types = new Queue<string>();
-                    types.Enqueue(type);
-                    while (types.Count > 0)
-                    {
-                        string tmp = types.Dequeue();
-                        if (_dataObjectWrapperController.WrapsType(tmp))
-                            ret[x] = _dataObjectWrapperController.WrapDataObject(tmp, ret[x], ref types);
-                        System.sDomain[] doms = System.Domains;
-                        foreach (System.sDomain dom in doms)
-                            ret[x] = dom.Core.WrapDataObject(ret[x], tmp, ref types);
-                    }
-                }
-                List<IDataObject> tret = new List<IDataObject>(ret);
-                for (int x = 0; x < tret.Count; x++)
-                {
-                    if (!condition.IsValidMatch(tret[x]))
-                    {
-                        tret.RemoveAt(x);
-                        x--;
-                    }
-                }
-                ret = tret.ToArray();
-            }
-            return ret;
-        }
-        public IDataObject WrapDataObject(IDataObject obj, string type, ref Queue<string> types)
-        {
-            IDataObject ret = obj;
-            if (_dataObjectWrapperController.WrapsType(type))
-                ret = _dataObjectWrapperController.WrapDataObject(type, ret, ref types);
+            if (_messageController.HandlesMessage(message))
+                return true;
             System.sDomain[] doms = System.Domains;
             foreach (System.sDomain dom in doms)
-                ret = dom.Core.WrapDataObject(ret, type, ref types);
-            return ret;
-        }
-        public bool DestroyObject(Messages.DataObject obj)
-        {
-            if (ProvidesType(obj.Type))
             {
-                bool ret = _dataObjectController.DestroyObject(obj);
-                if (obj.Object is DataObject)
-                    ret = AbsoluteParent.DestroyObject((Messages.DataObject)obj.Object);
-                return ret;
-            }
-            else { 
-                System.sDomain[] doms = System.Domains;
-                foreach (System.sDomain dom in doms)
-                {
-                    if (dom.Core.ProvidesType(obj.Type))
-                        return dom.Core.DestroyObject(obj);
-                }
+                if (dom.Core.HandlesMessage(message))
+                    return true;
             }
             return false;
         }
-        public bool StoreObject(Messages.DataObject obj)
+        public IInterDomainMessage InterceptMessage(IInterDomainMessage message)
         {
-            bool ret = false;
-            if (ProvidesType(obj.Type))
-            {
-                ret = _dataObjectController.StoreObject(obj);
-                if (obj.Object is DataObject)
-                    ret |= AbsoluteParent.StoreObject((Messages.DataObject)obj.Object);
-            }
-            else
-            {
-                System.sDomain[] doms = System.Domains;
-                foreach (System.sDomain dom in doms)
-                    ret |= dom.Core.StoreObject(obj);
-            }
+            IInterDomainMessage ret = message;
+            if (_messageController.InterceptsMessage(message))
+                ret = _messageController.InterceptMessage(message);
+            System.sDomain[] doms = System.Domains;
+            foreach (System.sDomain dom in doms)
+                ret = dom.Core.InterceptMessage(message);
+            if (!ret.GetType().IsMarshalByRef)
+                ret = (ret is ISecuredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecuredInterDomainMessage)ret) : new WrapperInterDomainMessage(ret));
             return ret;
+        }
+        public InterDomainMessageResponse ProcessMessage(IInterDomainMessage message)
+        {
+            if (_messageController.HandlesMessage(message))
+                return new InterDomainMessageResponse(message,_messageController.ProcessMessage(message));
+            System.sDomain[] doms = System.Domains;
+            foreach (System.sDomain dom in doms)
+            {
+                if (dom.Core.HandlesMessage(message))
+                    return dom.Core.ProcessMessage(message);
+            }
+            return null;
+        }
+        public void InterceptResponse(ref InterDomainMessageResponse response)
+        {
+            if (_messageController.InterceptsResponse(response))
+                _messageController.InterceptResponse(ref response);
+            System.sDomain[] doms = System.Domains;
+            foreach (System.sDomain dom in doms)
+                dom.Core.InterceptResponse(ref response);
         }
         #endregion
         #region Logging
@@ -249,10 +159,8 @@ namespace Org.Reddragonit.MultiDomain
             foreach (IStartup start in starts)
             {
                 start.Start();
-                if (start is DataObjectController)
-                    _dataObjectController = (DataObjectController)start;
-                else if (start is DataObjectWrapperController)
-                    _dataObjectWrapperController = (DataObjectWrapperController)start;
+                if (start is MessageController)
+                    _messageController = (MessageController)start;
                 else if (start is LogController)
                     _logController = (LogController)start;
             }

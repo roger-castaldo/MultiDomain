@@ -10,7 +10,7 @@ namespace Org.Reddragonit.MultiDomain.Messages
     {
         private IEvent _event;
 
-        public string Name { get { return _event.GetType().Name; } }
+        public string Name { get { return _event.Name; } }
 
         public object this[string name]
         {
@@ -56,6 +56,11 @@ namespace Org.Reddragonit.MultiDomain.Messages
         public override object InitializeLifetimeService()
         {
             return null;
+        }
+
+        public new Type GetType()
+        {
+            return _event.GetType();
         }
     }
 }

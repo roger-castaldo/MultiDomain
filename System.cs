@@ -1,8 +1,8 @@
 ﻿using Org.Reddragonit.MultiDomain.Controllers;
 using Org.Reddragonit.MultiDomain.Interfaces;
-using Org.Reddragonit.MultiDomain.Interfaces.DataSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.EventSystem;
 using Org.Reddragonit.MultiDomain.Interfaces.Logging;
+using Org.Reddragonit.MultiDomain.Interfaces.Messaging;
 using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
@@ -78,14 +78,16 @@ namespace Org.Reddragonit.MultiDomain
             _core.AbsoluteParent.ProcessEvent(evnt);
         }
         #endregion
-        #region DataObjects
-        public static DataObject ProduceNewObjectInstance(string type) { 
-            IDataObject obj = _core.AbsoluteParent.ProduceNewObjectInstance(type);
-            return (obj == null ? null : new DataObject(obj,type));
+        #region InterDomainMessages
+        public static InterDomainMessageResponse ProcessInterDomainMessage(IInterDomainMessage message)
+        {
+            if (!message.GetType().IsMarshalByRef)
+                message = (message is ISecuredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecuredInterDomainMessage)message) : new WrapperInterDomainMessage(message));
+            message = _core.AbsoluteParent.InterceptMessage(message);
+            InterDomainMessageResponse ret = _core.AbsoluteParent.ProcessMessage(message);
+            _core.AbsoluteParent.InterceptResponse(ref ret);
+            return ret;
         }
-        public static bool StoreObject(Messages.DataObject obj) { return _core.AbsoluteParent.StoreObject(obj); }
-        public static bool DestroyObject(Messages.DataObject obj) { return _core.AbsoluteParent.DestroyObject(obj); }
-        public static IDataObject[] SearchForObject(string type, ISearchCondition condition) { return _core.AbsoluteParent.SearchForObject(type, condition); }
         #endregion
         #region Logging
         public static void Error(Exception e)

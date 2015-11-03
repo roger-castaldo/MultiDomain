@@ -7,15 +7,20 @@ using System.Text;
 
 namespace Org.Reddragonit.MultiDomain.Controllers
 {
-    internal class LogController : IStartup,ILogWriter,IShutdown
+    internal sealed class LogController : IStartup,ILogWriter,IShutdown
     {
         private delegate void delAppendEntry(string sourceDomainName, AssemblyName sourceAssembly, string sourceTypeName, string sourceMethodName, LogLevels level, DateTime timestamp, string message);
-        private List<ILogWriter> _loggers;
-        private List<delAppendEntry> _delegates = new List<delAppendEntry>();
+        private static List<ILogWriter> _loggers;
+        private static List<delAppendEntry> _delegates = new List<delAppendEntry>();
+
+        static LogController()
+        {
+            _loggers = new List<ILogWriter>();
+            _delegates = new List<delAppendEntry>();
+        }
 
         public LogController()
         {
-            _loggers = new List<ILogWriter>();
         }
 
         public void Start()
