@@ -72,7 +72,7 @@ namespace Org.Reddragonit.MultiDomain
 
         #region Events
         public static string RegisterHandler(IEventHandler handler) { return _core.RegisterHandler(handler); }
-        public static void UnRegistereventHandler(string id) { _core.UnRegistereventHandler(id); }
+        public static void UnRegisterEventHandler(string id) { _core.UnRegistereventHandler(id); }
         public static void TriggerEvent(IEvent Event) { 
             Messages.Event evnt = new Messages.Event(Event);
             _core.AbsoluteParent.ProcessEvent(evnt);
