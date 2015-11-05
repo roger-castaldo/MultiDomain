@@ -84,7 +84,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     try{
                         if (message is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)message).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType()))
+                            if (((ISecuredInterDomainMessage)message).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
                             {
                                 if (idmpri.InterceptsMessage(message))
                                 {
@@ -117,7 +117,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     {
                         if (ret is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)ret).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType()))
+                            if (((ISecuredInterDomainMessage)ret).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
                             {
                                 if (idmpri.InterceptsMessage(ret))
                                     ret = idmpri.InterceptMessage(ret);
@@ -146,7 +146,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     {
                         if (message is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType()))
+                            if (((ISecuredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType().FullName))
                             {
                                 if (idmh.HandlesMessage(message))
                                 {
@@ -178,7 +178,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     {
                         if (message is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType()))
+                            if (((ISecuredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType().FullName))
                             {
                                 if (idmh.HandlesMessage(message))
                                 {
@@ -210,7 +210,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     {
                         if (response.Message is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType()))
+                            if (((ISecuredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
                             {
                                 if (idmpri.InterceptsResponse(response))
                                 {
@@ -241,7 +241,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                     {
                         if (response.Message is ISecuredInterDomainMessage)
                         {
-                            if (((ISecuredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType()))
+                            if (((ISecuredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
                             {
                                 if (idmpri.InterceptsResponse(response))
                                 {

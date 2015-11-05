@@ -27,6 +27,11 @@ namespace Org.Reddragonit.MultiDomain.Messages
             } 
         }
 
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         public PropertyInfo[] ResponseObjectProperties
         {
             get

@@ -238,35 +238,48 @@ namespace Org.Reddragonit.MultiDomain
             try
             {
                 dom = new sDomain(name);
-                foreach (object obj in assemblies)
-                {
-                    if (obj is string)
-                    {
-                        if (new FileInfo((string)obj).Exists)
-                            dom.Value.Core.LoadAssemblyFromFile((string)obj);
-                        else
-                            dom.Value.Domain.Load((string)obj);
-                    }
-                    else if (obj is byte[])
-                        dom.Value.Domain.Load((byte[])obj);
-                    else
-                        throw new Exception("Unable to load assembly in new domain unless it is a string or raw byte data.");
-                }
+                dom.Value.Core.LoadAssemblies(assemblies);
                 dom.Value.Core.EstablishParent(_core);
-                dom.Value.Core.Startup();
                 _domains.Add(dom.Value);
+                dom.Value.Core.Startup();
+                _mut.ReleaseMutex();
+                dom.Value.Domain.DomainUnload += Domain_DomainUnload;
             }
             catch (Exception e)
             {
                 if (dom.HasValue)
                 {
+                    for (int x = 0; x < _domains.Count; x++)
+                    {
+                        if (_domains[x].Domain.FriendlyName == dom.Value.Domain.FriendlyName)
+                        {
+                            System.Error("Unloading {0} due to error in startup for application domain.", dom.Value.Domain.FriendlyName);
+                            _domains.RemoveAt(x);
+                            break;
+                        }
+                    }
+                    _mut.ReleaseMutex();
                     try { AppDomain.Unload(dom.Value.Domain); }
                     catch (Exception ex) { }
                 }
                 dom=null;
             }
-            _mut.ReleaseMutex();
             return dom.HasValue;
+        }
+
+        internal static void Domain_DomainUnload(object sender, EventArgs e)
+        {
+            AppDomain dom = (AppDomain)sender;
+            _mut.WaitOne();
+            for (int x = 0; x < _domains.Count; x++)
+            {
+                if (_domains[x].Domain.FriendlyName == dom.FriendlyName)
+                {
+                    _domains.RemoveAt(x);
+                    break;
+                }
+            }
+            _mut.ReleaseMutex();
         }
     }
 }
