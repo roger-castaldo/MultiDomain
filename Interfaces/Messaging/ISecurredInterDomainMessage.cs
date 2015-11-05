@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Org.Reddragonit.MultiDomain.Interfaces.Messaging
 {
-    public interface ISecuredInterDomainMessage : IInterDomainMessage
+    public interface ISecurredInterDomainMessage : IInterDomainMessage
     {
         bool IsHandlerAllowed(string appDomainName, string handlerTypeFullName);
         bool IsPreRequestInterceptorAllowed(string appDomainName, string handlerTypeFullName);

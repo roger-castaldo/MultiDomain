@@ -10,6 +10,9 @@ namespace Org.Reddragonit.MultiDomain.Messages
     {
         private IEvent _event;
 
+        internal bool IsSecurred { get { return _event is ISecurredEvent; } }
+        internal bool IsHandlerAllowed(string appDomainName, string handlerTypeFullName) { return ((ISecurredEvent)_event).IsHandlerAllowed(appDomainName, handlerTypeFullName); }
+
         public string Name { get { return _event.Name; } }
 
         public object this[string name]

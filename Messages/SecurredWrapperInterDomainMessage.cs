@@ -5,11 +5,11 @@ using System.Text;
 
 namespace Org.Reddragonit.MultiDomain.Messages
 {
-    internal class SecurredWrapperInterDomainMessage : WrapperInterDomainMessage, ISecuredInterDomainMessage
+    internal class SecurredWrapperInterDomainMessage : WrapperInterDomainMessage, ISecurredInterDomainMessage
     {
-        private ISecuredInterDomainMessage _message;
+        private ISecurredInterDomainMessage _message;
 
-        public SecurredWrapperInterDomainMessage(ISecuredInterDomainMessage message)
+        public SecurredWrapperInterDomainMessage(ISecurredInterDomainMessage message)
             : base((IInterDomainMessage)message)
         {
             _message = message;

@@ -128,7 +128,7 @@ namespace Org.Reddragonit.MultiDomain
             foreach (System.sDomain dom in doms)
                 ret = dom.Core.InterceptMessage(message);
             if (!ret.GetType().IsMarshalByRef)
-                ret = (ret is ISecuredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecuredInterDomainMessage)ret) : new WrapperInterDomainMessage(ret));
+                ret = (ret is ISecurredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecurredInterDomainMessage)ret) : new WrapperInterDomainMessage(ret));
             return ret;
         }
         public InterDomainMessageResponse ProcessMessage(IInterDomainMessage message)

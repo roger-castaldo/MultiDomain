@@ -71,11 +71,20 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                 tmp = new sEventHandler[_handlers.Count];
                 _handlers.CopyTo(tmp, 0);
                 _mut.ReleaseMutex();
-                _ProcessEvent(Event, tmp);
+                if (Event.IsSecurred)
+                {
+                    List<sEventHandler> handlers = new List<sEventHandler>();
+                    foreach (sEventHandler hndlr in tmp)
+                    {
+                        if (Event.IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, hndlr.Handler.GetType().FullName))
+                            handlers.Add(hndlr);
+                    }
+                }else
+                    _ProcessEvent(Event, new List<sEventHandler>(tmp));
             }
         }
 
-        private void _ProcessEvent(Event Event, sEventHandler[] handlers)
+        private void _ProcessEvent(Event Event, List<sEventHandler> handlers)
         {
             if (Event.IsSynchronous)
             {

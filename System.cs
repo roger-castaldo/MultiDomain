@@ -83,7 +83,7 @@ namespace Org.Reddragonit.MultiDomain
         public static InterDomainMessageResponse ProcessInterDomainMessage(IInterDomainMessage message)
         {
             if (!message.GetType().IsMarshalByRef)
-                message = (message is ISecuredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecuredInterDomainMessage)message) : new WrapperInterDomainMessage(message));
+                message = (message is ISecurredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecurredInterDomainMessage)message) : new WrapperInterDomainMessage(message));
             message = _core.AbsoluteParent.InterceptMessage(message);
             InterDomainMessageResponse ret = _core.AbsoluteParent.ProcessMessage(message);
             if (ret!=null)
