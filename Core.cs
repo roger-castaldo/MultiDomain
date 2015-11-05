@@ -33,6 +33,12 @@ namespace Org.Reddragonit.MultiDomain
             }
         }
 
+        public void LoadAssemblyFromFile(string path)
+        {
+            try { Assembly.LoadFile(path); }
+            catch (Exception e) { System.Error(e); throw e; }
+        }
+
         public Core() {
             if (_eventController == null)
             {
@@ -173,6 +179,12 @@ namespace Org.Reddragonit.MultiDomain
 
         public void Shutdown()
         {
+            System.sDomain[] doms = System.Domains;
+            foreach (System.sDomain dom in doms)
+            {
+                try { AppDomain.Unload(dom.Domain); }
+                catch (Exception e) { }
+            }
             Type parent = typeof(IShutdown);
             List<IShutdown> stops = new List<IShutdown>();
             foreach (Assembly ass in AppDomain.CurrentDomain.GetAssemblies())

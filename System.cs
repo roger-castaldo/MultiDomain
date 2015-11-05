@@ -7,6 +7,7 @@ using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -85,7 +86,8 @@ namespace Org.Reddragonit.MultiDomain
                 message = (message is ISecuredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecuredInterDomainMessage)message) : new WrapperInterDomainMessage(message));
             message = _core.AbsoluteParent.InterceptMessage(message);
             InterDomainMessageResponse ret = _core.AbsoluteParent.ProcessMessage(message);
-            _core.AbsoluteParent.InterceptResponse(ref ret);
+            if (ret!=null)
+                _core.AbsoluteParent.InterceptResponse(ref ret);
             return ret;
         }
         #endregion
@@ -239,7 +241,12 @@ namespace Org.Reddragonit.MultiDomain
                 foreach (object obj in assemblies)
                 {
                     if (obj is string)
-                        dom.Value.Domain.Load((string)obj);
+                    {
+                        if (new FileInfo((string)obj).Exists)
+                            dom.Value.Core.LoadAssemblyFromFile((string)obj);
+                        else
+                            dom.Value.Domain.Load((string)obj);
+                    }
                     else if (obj is byte[])
                         dom.Value.Domain.Load((byte[])obj);
                     else
