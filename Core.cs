@@ -148,7 +148,14 @@ namespace Org.Reddragonit.MultiDomain
                             if (!t.IsInterface)
                             {
                                 if (new List<Type>(t.GetInterfaces()).Contains(parent))
-                                    starts.Add((IStartup)Activator.CreateInstance(t));
+                                {
+                                    if (t.FullName == typeof(MessageController).FullName)
+                                        _messageController = (MessageController)Activator.CreateInstance(t);
+                                    else if (t.FullName == typeof(LogController).FullName)
+                                        _logController = (LogController)Activator.CreateInstance(t);
+                                    else
+                                        starts.Add((IStartup)Activator.CreateInstance(t));
+                                }
                             }
                         }
                     }
@@ -162,14 +169,12 @@ namespace Org.Reddragonit.MultiDomain
                     }
                 }
             }
+            if (_logController != null)
+                _logController.Start();
+            if (_messageController != null)
+                _messageController.Start();
             foreach (IStartup start in starts)
-            {
                 start.Start();
-                if (start is MessageController)
-                    _messageController = (MessageController)start;
-                else if (start is LogController)
-                    _logController = (LogController)start;
-            }
         }
 
         void CurrentDomain_DomainUnload(object sender, EventArgs e)
