@@ -254,6 +254,7 @@ namespace Org.Reddragonit.MultiDomain
                         if (_domains[x].Domain.FriendlyName == dom.Value.Domain.FriendlyName)
                         {
                             System.Error("Unloading {0} due to error in startup for application domain.", dom.Value.Domain.FriendlyName);
+                            System.Error(e);
                             _domains.RemoveAt(x);
                             break;
                         }
