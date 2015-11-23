@@ -165,6 +165,7 @@ namespace Org.Reddragonit.MultiDomain
         {
             List<string> loadedTypes = new List<string>();
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             Type parent = typeof(IStartup);
             List<IStartup> starts = new List<IStartup>();
             foreach (Assembly ass in AppDomain.CurrentDomain.GetAssemblies())
@@ -208,7 +209,19 @@ namespace Org.Reddragonit.MultiDomain
             if (_messageController != null)
                 _messageController.Start();
             foreach (IStartup start in starts)
-                start.Start();
+            {
+                try
+                {
+                    start.Start();
+                }
+                catch (Exception e) { System.Error(e); throw e; }
+            }
+        }
+
+        void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            System.Error((Exception)e.ExceptionObject);
+            throw (Exception)e.ExceptionObject;
         }
 
         void CurrentDomain_DomainUnload(object sender, EventArgs e)
