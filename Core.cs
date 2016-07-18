@@ -47,16 +47,20 @@ namespace Org.Reddragonit.MultiDomain
                 Assembly ass = null;
                 if (obj is string)
                 {
-                    if (new FileInfo((string)obj).Exists)
-                        ass = Assembly.LoadFile((string)obj);
-                    else
-                        ass = Assembly.Load((string)obj);
+                    if (!((string)obj).EndsWith(".config"))
+                    {
+                        if (new FileInfo((string)obj).Exists)
+                            ass = Assembly.LoadFile((string)obj);
+                        else
+                            ass = Assembly.Load((string)obj);
+                    }
                 }
                 else if (obj is byte[])
                     ass = Assembly.Load((byte[])obj);
                 else
                     throw new Exception("Unable to load assembly in new domain unless it is a string or raw byte data.");
-                _loadedAssemblies.Add(ass.FullName, ass);
+                if (ass!=null)
+                    _loadedAssemblies.Add(ass.FullName, ass);
             }
         }
 

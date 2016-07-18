@@ -34,10 +34,18 @@ namespace Org.Reddragonit.MultiDomain
                     _processEvent.BeginInvoke(Event, null, null);
             }
 
-
             public sDomain(string name)
+                : this(name,null) { }
+
+            public sDomain(string name,string configFile)
             {
-                _domain = AppDomain.CreateDomain((name == null ? System._rand.NextString(32) : name));
+                if (configFile != null)
+                {
+                    AppDomainSetup setup = AppDomain.CurrentDomain.SetupInformation;
+                    setup.ConfigurationFile = configFile;
+                    _domain = AppDomain.CreateDomain((name == null ? System._rand.NextString(32) : name), AppDomain.CurrentDomain.Evidence, setup);
+                }else
+                    _domain = AppDomain.CreateDomain((name == null ? System._rand.NextString(32) : name));
                 _domain.Load(typeof(System).Assembly.FullName);
                 _core = (Core)_domain.CreateInstanceAndUnwrap(typeof(System).Assembly.FullName, typeof(Core).FullName);
                 _processEvent = new delProcessEvent(_core.ProcessEvent);
@@ -237,7 +245,19 @@ namespace Org.Reddragonit.MultiDomain
             sDomain? dom = null;
             try
             {
-                dom = new sDomain(name);
+                foreach (object obj in assemblies)
+                {
+                    if (obj is string)
+                    {
+                        if (((string)obj).EndsWith(".config"))
+                        {
+                            dom = new sDomain(name, (string)obj);
+                            break;
+                        }
+                    }
+                }
+                if (dom==null)
+                    dom = new sDomain(name);
                 dom.Value.Core.LoadAssemblies(assemblies);
                 dom.Value.Core.EstablishParent(_core);
                 _domains.Add(dom.Value);

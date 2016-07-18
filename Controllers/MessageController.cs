@@ -36,7 +36,7 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                             {
                                 if (!t.IsInterface)
                                 {
-                                    if (new List<Type>(t.GetInterfaces()).Contains(parent) && t.FullName != this.GetType().FullName)
+                                    if (new List<Type>(t.GetInterfaces()).Contains(parent) && t.FullName != this.GetType().FullName && !t.IsAbstract)
                                     {
                                         switch (parent.Name)
                                         {
