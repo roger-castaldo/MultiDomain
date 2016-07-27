@@ -94,15 +94,15 @@ namespace Org.Reddragonit.MultiDomain
             DateTime start = DateTime.Now;
             message = new RoutedInterDomainMessage(message);
             message = _core.AbsoluteParent.InterceptMessage(message);
-            Console.WriteLine(string.Format("Time to intercept interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+            Debug("Time to intercept interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds);
             start = DateTime.Now;
             InterDomainMessageResponse ret = _core.AbsoluteParent.ProcessMessage(message);
-            Console.WriteLine(string.Format("Time to handle interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+            Debug("Time to handle interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds);
             start = DateTime.Now;
             if (ret != null)
             {
                 _core.AbsoluteParent.InterceptResponse(ref ret);
-                Console.WriteLine(string.Format("Time to intercept interdomain response {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+                Debug("Time to intercept interdomain response {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds);
             }
             return ret;
         }
