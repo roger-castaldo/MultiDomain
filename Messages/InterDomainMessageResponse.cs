@@ -131,6 +131,11 @@ namespace Org.Reddragonit.MultiDomain.Messages
             _interceptors.Add(new sInterceptor(AppDomain.CurrentDomain.FriendlyName, type));
         }
 
+        public bool HasIntercepted(Type type)
+        {
+            return _interceptors.Contains(new sInterceptor(AppDomain.CurrentDomain.FriendlyName, type));
+        }
+
         internal static InterDomainMessageResponse SwapResponse(InterDomainMessageResponse response, object result)
         {
             InterDomainMessageResponse ret = new InterDomainMessageResponse(response, result);

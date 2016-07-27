@@ -34,6 +34,11 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\Messaging\AllowedRequestHandler.cs" />
+    <Compile Include="Attributes\Messaging\AllowedRequestIntercept.cs" />
+    <Compile Include="Attributes\Messaging\BlockRequestIntercept.cs" />
+    <Compile Include="Attributes\Messaging\Enums.cs" />
+    <Compile Include="Attributes\Messaging\HandlesMessage.cs" />
     <Compile Include="Controllers\EventController.cs" />
     <Compile Include="Controllers\LogController.cs" />
     <Compile Include="Controllers\MessageController.cs" />
@@ -48,11 +53,10 @@
     <Compile Include="Interfaces\Messaging\IInterDomainMessageHandler.cs" />
     <Compile Include="Interfaces\Messaging\IInterDomainMessagePostRequestInterceptor.cs" />
     <Compile Include="Interfaces\Messaging\IInterDomainMessagePreRequestInterceptor.cs" />
-    <Compile Include="Interfaces\Messaging\ISecurredInterDomainMessage.cs" />
     <Compile Include="Messages\InterDomainMessageResponse.cs" />
-    <Compile Include="Messages\SecurredWrapperInterDomainMessage.cs" />
+    <Compile Include="Messages\RoutedInterDomainMessage.cs" />
     <Compile Include="Messages\Structures.cs" />
-    <Compile Include="Messages\WrapperInterDomainMessage.cs" />
+    <Compile Include="Structures.cs" />
     <Compile Include="System.cs" />
     <Compile Include="Interfaces\EventSystem\IEvent.cs" />
     <Compile Include="Interfaces\EventSystem\IEventHandler.cs" />
@@ -61,6 +65,7 @@
     <Compile Include="MT19937.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -1,5 +1,7 @@
-﻿using Org.Reddragonit.MultiDomain.Interfaces;
+﻿using Org.Reddragonit.MultiDomain.Attributes.Messaging;
+using Org.Reddragonit.MultiDomain.Interfaces;
 using Org.Reddragonit.MultiDomain.Interfaces.Messaging;
+using Org.Reddragonit.MultiDomain.Messages;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -9,15 +11,15 @@ namespace Org.Reddragonit.MultiDomain.Controllers
 {
     internal class MessageController :  IStartup,IShutdown,IInterDomainMessageHandler,IInterDomainMessagePreRequestInterceptor
     {
-        private static List<IInterDomainMessageHandler> _handlers;
-        private static List<IInterDomainMessagePreRequestInterceptor> _preRequestors;
-        private static List<IInterDomainMessagePostRequestInterceptor> _postRequestors;
+        private static Dictionary<sRoute,List<IInterDomainMessageHandler>> _handlers;
+        private static Dictionary<sRoute,List<IInterDomainMessagePreRequestInterceptor>> _preRequestors;
+        private static Dictionary<sRoute,List<IInterDomainMessagePostRequestInterceptor>> _postRequestors;
 
         static MessageController()
         {
-            _handlers = new List<IInterDomainMessageHandler>();
-            _preRequestors = new List<IInterDomainMessagePreRequestInterceptor>();
-            _postRequestors = new List<IInterDomainMessagePostRequestInterceptor>();
+            _handlers = new Dictionary<sRoute,List<IInterDomainMessageHandler>>();
+            _preRequestors = new Dictionary<sRoute,List<IInterDomainMessagePreRequestInterceptor>>();
+            _postRequestors = new Dictionary<sRoute,List<IInterDomainMessagePostRequestInterceptor>>();
         }
 
         public MessageController() { }
@@ -38,18 +40,60 @@ namespace Org.Reddragonit.MultiDomain.Controllers
                                 {
                                     if (new List<Type>(t.GetInterfaces()).Contains(parent) && t.FullName != this.GetType().FullName && !t.IsAbstract)
                                     {
+                                        object obj = t.GetConstructor(Type.EmptyTypes).Invoke(new object[0]);
+                                        sRoute[] routes = _GenerateRoutes(obj);
                                         switch (parent.Name)
                                         {
                                             case "IInterDomainMessageHandler":
-                                                _handlers.Add((IInterDomainMessageHandler)t.GetConstructor(Type.EmptyTypes).Invoke(new object[0]));
+                                                lock (_handlers)
+                                                {
+                                                    foreach (sRoute srt in routes)
+                                                    {
+                                                        List<IInterDomainMessageHandler> handlers = new List<IInterDomainMessageHandler>();
+                                                        if (_handlers.ContainsKey(srt))
+                                                        {
+                                                            handlers = _handlers[srt];
+                                                            _handlers.Remove(srt);
+                                                        }
+                                                        handlers.Add((IInterDomainMessageHandler)obj);
+                                                        _handlers.Add(srt, handlers);
+                                                    }
+                                                }
                                                 break;
                                             case "IInterDomainMessagePostRequestInterceptor":
-                                                _postRequestors.Add((IInterDomainMessagePostRequestInterceptor)t.GetConstructor(Type.EmptyTypes).Invoke(new object[0]));
+                                                lock (_postRequestors)
+                                                {
+                                                    foreach (sRoute srt in routes)
+                                                    {
+                                                        List<IInterDomainMessagePostRequestInterceptor> postInterceptors = new List<IInterDomainMessagePostRequestInterceptor>();
+                                                        if (_postRequestors.ContainsKey(srt))
+                                                        {
+                                                            postInterceptors = _postRequestors[srt];
+                                                            _postRequestors.Remove(srt);
+                                                        }
+                                                        postInterceptors.Add((IInterDomainMessagePostRequestInterceptor)obj);
+                                                        _postRequestors.Add(srt, postInterceptors);
+                                                    }
+                                                }
                                                 break;
                                             case "IInterDomainMessagePreRequestInterceptor":
-                                                _preRequestors.Add((IInterDomainMessagePreRequestInterceptor)t.GetConstructor(Type.EmptyTypes).Invoke(new object[0]));
+                                                lock (_preRequestors)
+                                                {
+                                                    foreach (sRoute srt in routes)
+                                                    {
+                                                        List<IInterDomainMessagePreRequestInterceptor> preInterceptors = new List<IInterDomainMessagePreRequestInterceptor>();
+                                                        if (_preRequestors.ContainsKey(srt))
+                                                        {
+                                                            preInterceptors = _preRequestors[srt];
+                                                            _preRequestors.Remove(srt);
+                                                        }
+                                                        preInterceptors.Add((IInterDomainMessagePreRequestInterceptor)obj);
+                                                        _preRequestors.Add(srt, preInterceptors);
+                                                    }
+                                                }
                                                 break;
                                         }
+                                        System._RegsiterMessageHandlerRoute(routes);
                                     }
                                 }
                             }
@@ -67,39 +111,57 @@ namespace Org.Reddragonit.MultiDomain.Controllers
             }
         }
 
+        private sRoute[] _GenerateRoutes(object obj)
+        {
+            List<sRoute> ret = new List<sRoute>();
+            foreach (HandlesMessage hm in obj.GetType().GetCustomAttributes(typeof(HandlesMessage),false)){
+                ret.AddRange(new sRoute[]{
+                    new sRoute(AppDomain.CurrentDomain.FriendlyName,obj.GetType().FullName,hm.MessageName),
+                    new sRoute(null,obj.GetType().FullName,hm.MessageName),
+                    new sRoute(AppDomain.CurrentDomain.FriendlyName,null,hm.MessageName),
+                    new sRoute(null,null,hm.MessageName)
+                });
+            }
+            if (ret.Count==0)
+                throw new Exception(string.Format("Unable to create message interceptor/handler without any HandlesMessage attributes.  Type:{0},Domain:{1}",obj.GetType().FullName,AppDomain.CurrentDomain.FriendlyName));
+            return ret.ToArray();
+        }
+
         public void Shutdown()
         {
-            lock (_preRequestors) { _preRequestors.Clear(); }
-            lock (_handlers) { _handlers.Clear(); }
-            lock (_postRequestors) { _postRequestors.Clear(); }
+            sRoute[] keys;
+            lock (_preRequestors) {
+                keys = new sRoute[_preRequestors.Count];
+                _preRequestors.Keys.CopyTo(keys, 0);
+                System._UnRegisterMessageHandlerRoute(keys);
+                _preRequestors.Clear(); 
+            }
+            lock (_handlers) {
+                keys = new sRoute[_handlers.Count];
+                _handlers.Keys.CopyTo(keys, 0);
+                System._UnRegisterMessageHandlerRoute(keys);
+                _handlers.Clear(); 
+            }
+            lock (_postRequestors) {
+                keys = new sRoute[_postRequestors.Count];
+                _postRequestors.Keys.CopyTo(keys, 0);
+                System._UnRegisterMessageHandlerRoute(keys);
+                _postRequestors.Clear(); 
+            }
         }
 
         public bool InterceptsMessage(IInterDomainMessage message)
         {
             bool ret = false;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
             lock (_preRequestors)
             {
-                foreach (IInterDomainMessagePreRequestInterceptor idmpri in _preRequestors)
+                foreach (sRoute srt in ridm.PreInterceptRoutes)
                 {
-                    try{
-                        if (message is ISecurredInterDomainMessage)
-                        {
-                            if (((ISecurredInterDomainMessage)message).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
-                            {
-                                if (idmpri.InterceptsMessage(message))
-                                {
-                                    ret = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else if (idmpri.InterceptsMessage(message))
-                        {
-                            ret = true;
-                            break;
-                        }
-                    }catch(Exception e){
-                        System.Error(e);
+                    if (_preRequestors.ContainsKey(srt))
+                    {
+                        ret = true;
+                        break;
                     }
                 }
             }
@@ -109,59 +171,35 @@ namespace Org.Reddragonit.MultiDomain.Controllers
         public IInterDomainMessage InterceptMessage(IInterDomainMessage message)
         {
             IInterDomainMessage ret = message;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
             lock (_preRequestors)
             {
-                foreach (IInterDomainMessagePreRequestInterceptor idmpri in _preRequestors)
+                foreach (sRoute srt in ridm.PreInterceptRoutes)
                 {
-                    try
+                    if (_preRequestors.ContainsKey(srt))
                     {
-                        if (ret is ISecurredInterDomainMessage)
-                        {
-                            if (((ISecurredInterDomainMessage)ret).IsPreRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
-                            {
-                                if (idmpri.InterceptsMessage(ret))
-                                    ret = idmpri.InterceptMessage(ret);
-                            }
-                        }
-                        else if (idmpri.InterceptsMessage(ret))
-                            ret = idmpri.InterceptMessage(ret);
-                    }
-                    catch (Exception e)
-                    {
-                        System.Error(e);
+                        foreach (IInterDomainMessagePreRequestInterceptor iidmpri in _preRequestors[srt])
+                            ret = iidmpri.InterceptMessage(ret);
+                        break;
                     }
                 }
             }
-            return ret;
+            return new RoutedInterDomainMessage(ridm,ret);
         }
 
         public bool HandlesMessage(IInterDomainMessage message)
         {
             bool ret = false;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
             lock (_handlers)
             {
-                foreach (IInterDomainMessageHandler idmh in _handlers)
+                foreach (sRoute srt in ridm.HandlerRoutes)
                 {
-                    try
+                    if (_handlers.ContainsKey(srt))
                     {
-                        if (message is ISecurredInterDomainMessage)
-                        {
-                            if (((ISecurredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType().FullName))
-                            {
-                                if (idmh.HandlesMessage(message))
-                                {
-                                    ret = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else if (idmh.HandlesMessage(message))
-                        {
-                            ret = true;
-                            break;
-                        }
+                        ret = true;
+                        break;
                     }
-                    catch (Exception e) { System.Error(e); }
                 }
             }
             return ret;
@@ -170,30 +208,28 @@ namespace Org.Reddragonit.MultiDomain.Controllers
         public object ProcessMessage(IInterDomainMessage message)
         {
             object ret = null;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
             lock (_handlers)
             {
-                foreach (IInterDomainMessageHandler idmh in _handlers)
+                foreach (sRoute srt in ridm.HandlerRoutes)
                 {
-                    try
+                    if (_handlers.ContainsKey(srt))
                     {
-                        if (message is ISecurredInterDomainMessage)
+                        foreach (IInterDomainMessageHandler idmh in _handlers[srt])
                         {
-                            if (((ISecurredInterDomainMessage)message).IsHandlerAllowed(AppDomain.CurrentDomain.FriendlyName, idmh.GetType().FullName))
+                            try
                             {
-                                if (idmh.HandlesMessage(message))
-                                {
-                                    ret = idmh.ProcessMessage(message);
-                                    break;
-                                }
+                                ret = idmh.ProcessMessage(ridm);
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                System.Error(e);
+                                ret = null;
                             }
                         }
-                        else if (idmh.HandlesMessage(message))
-                        {
-                            ret = idmh.ProcessMessage(message);
-                            break;
-                        }
+                        if (ret != null) { break; }
                     }
-                    catch (Exception e) { System.Error(e); }
                 }
             }
             return ret;
@@ -202,29 +238,16 @@ namespace Org.Reddragonit.MultiDomain.Controllers
         public bool InterceptsResponse(Messages.InterDomainMessageResponse response)
         {
             bool ret = false;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)response.Message;
             lock (_postRequestors)
             {
-                foreach (IInterDomainMessagePostRequestInterceptor idmpri in _postRequestors)
+                foreach (sRoute srt in ridm.PostInterceptRoutes)
                 {
-                    try
+                    if (_postRequestors.ContainsKey(srt))
                     {
-                        if (response.Message is ISecurredInterDomainMessage)
-                        {
-                            if (((ISecurredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
-                            {
-                                if (idmpri.InterceptsResponse(response))
-                                {
-                                    ret = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else if (idmpri.InterceptsResponse(response))
-                        {
-                            ret = true;
-                            break;
-                        }
-                    } catch (Exception e) { System.Error(e); }
+                        ret = true;
+                        break;
+                    }
                 }
             }
             return ret;
@@ -232,35 +255,27 @@ namespace Org.Reddragonit.MultiDomain.Controllers
 
         public void InterceptResponse(ref Messages.InterDomainMessageResponse response)
         {
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)response.Message;
             lock (_postRequestors)
             {
-                foreach (IInterDomainMessagePostRequestInterceptor idmpri in _postRequestors)
+                foreach (sRoute srt in ridm.PostInterceptRoutes)
                 {
-                    object tmp = null;
-                    try
+                    if (_postRequestors.ContainsKey(srt))
                     {
-                        if (response.Message is ISecurredInterDomainMessage)
+                        foreach (IInterDomainMessagePostRequestInterceptor idmpri in _postRequestors[srt])
                         {
-                            if (((ISecurredInterDomainMessage)response.Message).IsPostRequestInterceptorAllowed(AppDomain.CurrentDomain.FriendlyName, idmpri.GetType().FullName))
+                            if (!response.HasIntercepted(idmpri.GetType()))
                             {
-                                if (idmpri.InterceptsResponse(response))
+                                object tmp;
+                                idmpri.InterceptResponse(response, out tmp);
+                                if (tmp != null)
                                 {
-                                    idmpri.InterceptResponse(response, out tmp);
-                                    if (tmp != null)
-                                        response = Messages.InterDomainMessageResponse.SwapResponse(response, tmp);
+                                    response = Messages.InterDomainMessageResponse.SwapResponse(response, tmp);
                                     response.MarkInterceptor(idmpri.GetType());
                                 }
                             }
                         }
-                        else if (idmpri.InterceptsResponse(response))
-                        {
-                            idmpri.InterceptResponse(response, out tmp);
-                            if (tmp != null)
-                                response = Messages.InterDomainMessageResponse.SwapResponse(response, tmp);
-                            response.MarkInterceptor(idmpri.GetType());
-                        }
                     }
-                    catch (Exception e) { System.Error(e); }
                 }
             }
         }

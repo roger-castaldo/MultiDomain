@@ -17,6 +17,21 @@ namespace Org.Reddragonit.MultiDomain.Messages
             _appDomain = appDomain;
             _type = type;
         }
+
+        public override string ToString()
+        {
+            return string.Format("{0}:{1}", _appDomain, _type.ToString());
+        }
+
+        public override int GetHashCode()
+        {
+            return ToString().GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ToString() == obj.ToString();
+        }
     }
 
         

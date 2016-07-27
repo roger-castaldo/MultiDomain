@@ -73,6 +73,7 @@ namespace Org.Reddragonit.MultiDomain
         static System()
         {
             _core = new Core();
+            _core.Init();
             _mut = new Mutex(false);
             _rand = new MT19937(DateTime.Now.Ticks);
             _domains = new List<sDomain>();
@@ -90,12 +91,19 @@ namespace Org.Reddragonit.MultiDomain
         #region InterDomainMessages
         public static InterDomainMessageResponse ProcessInterDomainMessage(IInterDomainMessage message)
         {
-            if (!message.GetType().IsMarshalByRef)
-                message = (message is ISecurredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecurredInterDomainMessage)message) : new WrapperInterDomainMessage(message));
+            DateTime start = DateTime.Now;
+            message = new RoutedInterDomainMessage(message);
             message = _core.AbsoluteParent.InterceptMessage(message);
+            Console.WriteLine(string.Format("Time to intercept interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+            start = DateTime.Now;
             InterDomainMessageResponse ret = _core.AbsoluteParent.ProcessMessage(message);
-            if (ret!=null)
+            Console.WriteLine(string.Format("Time to handle interdomain message {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+            start = DateTime.Now;
+            if (ret != null)
+            {
                 _core.AbsoluteParent.InterceptResponse(ref ret);
+                Console.WriteLine(string.Format("Time to intercept interdomain response {0}:{1}ms", message.Name, DateTime.Now.Subtract(start).TotalMilliseconds));
+            }
             return ret;
         }
         #endregion
@@ -256,7 +264,7 @@ namespace Org.Reddragonit.MultiDomain
                         }
                     }
                 }
-                if (dom==null)
+                if (dom == null)
                     dom = new sDomain(name);
                 dom.Value.Core.LoadAssemblies(assemblies);
                 dom.Value.Core.EstablishParent(_core);
@@ -282,7 +290,7 @@ namespace Org.Reddragonit.MultiDomain
                     try { AppDomain.Unload(dom.Value.Domain); }
                     catch (Exception ex) { }
                 }
-                dom=null;
+                dom = null;
             }
             return dom.HasValue;
         }
@@ -300,6 +308,16 @@ namespace Org.Reddragonit.MultiDomain
                 }
             }
             _mut.ReleaseMutex();
+        }
+
+        internal static void _RegsiterMessageHandlerRoute(sRoute[] routes)
+        {
+            _core._RegsiterMessageHandlerRoute(routes);
+        }
+
+        internal static void _UnRegisterMessageHandlerRoute(sRoute[] routes)
+        {
+            _core._UnRegsiterMessageHandlerRoute(routes);
         }
     }
 }

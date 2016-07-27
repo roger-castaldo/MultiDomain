@@ -7,7 +7,6 @@ namespace Org.Reddragonit.MultiDomain.Interfaces.Messaging
 {
     public interface IInterDomainMessagePostRequestInterceptor
     {
-        bool InterceptsResponse(InterDomainMessageResponse response);
         void InterceptResponse(InterDomainMessageResponse response,out object newResponseObject);
     }
 }

@@ -23,6 +23,8 @@ namespace Org.Reddragonit.MultiDomain
         private static delProcessEvent _processEvent;
         private static delProcessEvent _processEventInChildren;
         private Core Parent { get { return _parent; } }
+        private static Dictionary<sRoute,List<Core>> _subRoutes;
+        private static List<sRoute> _myRoutes;
 
         public override object InitializeLifetimeService()
         {
@@ -42,6 +44,7 @@ namespace Org.Reddragonit.MultiDomain
 
         public void LoadAssemblies(object[] assemblies)
         {
+            Init();
             foreach (object obj in assemblies)
             {
                 Assembly ass = null;
@@ -65,11 +68,17 @@ namespace Org.Reddragonit.MultiDomain
         }
 
         public Core() {
+        }
+
+        internal void Init()
+        {
             if (_eventController == null)
             {
                 AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-                _loadedAssemblies = new Dictionary<string, Assembly>();
+                _subRoutes = new Dictionary<sRoute, List<Core>>();
+                _myRoutes = new List<sRoute>();
                 _eventController = new EventController();
+                _loadedAssemblies = new Dictionary<string, Assembly>();
                 _processEvent = new delProcessEvent(_eventController.ProcessEvent);
                 _processEventInChildren = new delProcessEvent(_ProcessEventInChildren);
                 _logController = new LogController();
@@ -86,6 +95,67 @@ namespace Org.Reddragonit.MultiDomain
         }
 
         public bool HasParent { get { return _parent != null; } }
+
+        internal void _RegisterRoute(sRoute route,Core core)
+        {
+            lock (_subRoutes)
+            {
+                List<Core> cores = new List<Core>();
+                if (_subRoutes.ContainsKey(route))
+                {
+                    cores = _subRoutes[route];
+                    _subRoutes.Remove(route);
+                }
+                cores.Add(core);
+                _subRoutes.Add(route, cores);
+            }
+            if (_parent != null)
+                _parent._RegisterRoute(route, this);
+        }
+
+        internal void _UnRegisterRoute(sRoute route, Core core)
+        {
+            lock (_subRoutes)
+            {
+                List<Core> cores = new List<Core>();
+                if (_subRoutes.ContainsKey(route))
+                {
+                    cores = _subRoutes[route];
+                    _subRoutes.Remove(route);
+                }
+                cores.Remove(core);
+                _subRoutes.Add(route, cores);
+            }
+            if (_parent != null)
+                _parent._UnRegisterRoute(route, this);
+        }
+
+        internal void _RegsiterMessageHandlerRoute(sRoute[] routes)
+        {
+            lock (_myRoutes)
+            {
+                _myRoutes.AddRange(routes);
+            }
+            if (_parent != null)
+            {
+                foreach (sRoute srt in routes)
+                    _parent._RegisterRoute(srt, this);
+            }
+        }
+
+        internal void _UnRegsiterMessageHandlerRoute(sRoute[] routes)
+        {
+            lock (_myRoutes)
+            {
+                foreach (sRoute srt in routes)
+                    _myRoutes.Remove(srt);
+            }
+            if (_parent != null)
+            {
+                foreach (sRoute srt in routes)
+                    _parent._UnRegisterRoute(srt, this);
+            }
+        }
 
         #region Events
         public string RegisterHandler(IEventHandler handler) { return _eventController.RegisterHandler(handler); }
@@ -108,52 +178,168 @@ namespace Org.Reddragonit.MultiDomain
             foreach (System.sDomain dom in doms)
                 dom.ProcessEvent(Event);
         }
-        public void EstablishParent(Core parent) { _parent=parent; }
+        public void EstablishParent(Core parent) { 
+            _parent=parent;
+            if (_myRoutes != null)
+            {
+                lock (_myRoutes)
+                {
+                    foreach (sRoute srt in _myRoutes)
+                        _parent._RegisterRoute(srt, this);
+                }
+            }
+        }
         #endregion
         #region InterDomainMessages
         public bool HandlesMessage(IInterDomainMessage message)
         {
-            if (_messageController.HandlesMessage(message))
-                return true;
-            System.sDomain[] doms = System.Domains;
-            foreach (System.sDomain dom in doms)
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
+            bool ret = false;
+            lock (_myRoutes)
             {
-                if (dom.Core.HandlesMessage(message))
-                    return true;
+                foreach (sRoute srt in ridm.HandlerRoutes)
+                {
+                    if (_myRoutes.Contains(srt))
+                    {
+                        ret = true;
+                        break;
+                    }
+                }
             }
-            return false;
+            if (!ret)
+            {
+                lock (_subRoutes)
+                {
+                    foreach (sRoute srt in ridm.HandlerRoutes)
+                    {
+                        if (_subRoutes.ContainsKey(srt))
+                        {
+                            ret = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            return ret;
         }
         public IInterDomainMessage InterceptMessage(IInterDomainMessage message)
         {
             IInterDomainMessage ret = message;
-            if (_messageController.InterceptsMessage(message))
-                ret = _messageController.InterceptMessage(message);
-            System.sDomain[] doms = System.Domains;
-            foreach (System.sDomain dom in doms)
-                ret = dom.Core.InterceptMessage(message);
-            if (!ret.GetType().IsMarshalByRef)
-                ret = (ret is ISecurredInterDomainMessage ? new SecurredWrapperInterDomainMessage((ISecurredInterDomainMessage)ret) : new WrapperInterDomainMessage(ret));
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
+            List<Core> subCores = new List<Core>();
+            lock (_myRoutes)
+            {
+                foreach (sRoute srt in ridm.PreInterceptRoutes)
+                {
+                    if (_myRoutes.Contains(srt))
+                    {
+                        if (_messageController.InterceptsMessage(ridm))
+                            subCores.Add(this);
+                        break;
+                    }
+                }
+            }
+            lock (_subRoutes)
+            {
+                foreach (sRoute srt in ridm.PreInterceptRoutes)
+                {
+                    if (_subRoutes.ContainsKey(srt))
+                    {
+                        foreach (Core cr in _subRoutes[srt])
+                        {
+                            if (!subCores.Contains(cr))
+                                subCores.Add(cr);
+                        }
+                    }
+                }
+            }
+            foreach (Core cr in subCores)
+            {
+                try
+                {
+                    ret = cr.InterceptMessage(ret);
+                }
+                catch (Exception e) { }
+            }
             return ret;
         }
+
         public InterDomainMessageResponse ProcessMessage(IInterDomainMessage message)
         {
-            if (_messageController.HandlesMessage(message))
-                return new InterDomainMessageResponse(message,_messageController.ProcessMessage(message));
-            System.sDomain[] doms = System.Domains;
-            foreach (System.sDomain dom in doms)
+            InterDomainMessageResponse ret = null;
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)message;
+            lock (_myRoutes)
             {
-                if (dom.Core.HandlesMessage(message))
-                    return dom.Core.ProcessMessage(message);
+                foreach (sRoute srt in ridm.HandlerRoutes)
+                {
+                    if (_myRoutes.Contains(srt))
+                    {
+                        if (_messageController.HandlesMessage(ridm))
+                        {
+                            ret = new InterDomainMessageResponse(ridm, _messageController.ProcessMessage(ridm));
+                            break;
+                        }
+                    }
+                }
             }
-            return null;
+            if (ret == null)
+            {
+                lock (_subRoutes)
+                {
+                    foreach (sRoute srt in ridm.HandlerRoutes)
+                    {
+                        if (_subRoutes.ContainsKey(srt))
+                        {
+                            foreach (Core cr in _subRoutes[srt])
+                            {
+                                if (cr.HandlesMessage(ridm))
+                                {
+                                    ret = cr.ProcessMessage(ridm);
+                                    break;
+                                }
+                            }
+                            if (ret != null)
+                                break;
+
+                        }
+                    }
+                }
+            }
+            return ret;
         }
+
         public void InterceptResponse(ref InterDomainMessageResponse response)
         {
-            if (_messageController.InterceptsResponse(response))
-                _messageController.InterceptResponse(ref response);
-            System.sDomain[] doms = System.Domains;
-            foreach (System.sDomain dom in doms)
-                dom.Core.InterceptResponse(ref response);
+            RoutedInterDomainMessage ridm = (RoutedInterDomainMessage)response.Message;
+            lock (_myRoutes)
+            {
+                foreach (sRoute srt in ridm.PostInterceptRoutes)
+                {
+                    if (_myRoutes.Contains(srt))
+                    {
+                        if (_messageController.InterceptsResponse(response))
+                            _messageController.InterceptResponse(ref response);
+                        break;
+                    }
+                }
+            }
+            List<Core> subCores = new List<Core>();
+            lock (_subRoutes)
+            {
+                foreach (sRoute srt in ridm.PostInterceptRoutes)
+                {
+                    if (_subRoutes.ContainsKey(srt))
+                    {
+                        foreach (Core cr in _subRoutes[srt])
+                        {
+                            if (!subCores.Contains(cr))
+                                subCores.Add(cr);
+                        }
+                    }
+                }
+                foreach (Core cr in subCores)
+                    cr.InterceptResponse(ref response);
+            }
         }
         #endregion
         #region Logging
